@@ -1,10 +1,10 @@
 Name:           whitefetch
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Custom system information fetch tool written in Python
 
 License:        MIT
-URL:            https://github.com
+URL:            https://github.com/rastrelpojopam-cmyk/whitefetch
 BuildArch:      noarch
 
 Requires:       python3
@@ -14,17 +14,18 @@ Requires:       python3-psutil
 A lightweight and beautiful system information fetch tool optimized for Fedora Linux.
 
 %prep
-# Для GitHub-репозиториев секцию подготовки оставляем пустой, файлы уже на месте
-%build
+# Создаем и изолируем рабочую директорию сборщика в облаке
+%autosetup -c -T
+# Копируем файл из репозитория в эту директорию
+cp %{_builddir}/whitefetch-%{version}/../whitefetch .
 
 %install
 mkdir -p %{buildroot}%{_bindir}
-# Файл whitefetch уже находится в рабочей папке сборщика, просто устанавливаем его
 install -p -m 755 whitefetch %{buildroot}%{_bindir}/whitefetch
 
 %files
 %attr(0755, root, root) %{_bindir}/whitefetch
 
 %changelog
-* Wed Jul 01 2026 Artem <rastrelpojopam@gmail.com> - 1.0.0-4
-- Fix cloud build paths for Fedora Copr
+* Wed Jul 01 2026 Artem <rastrelpojopam@gmail.com> - 1.0.0-5
+- Add proper autosetup and directory setup for cloud builds
