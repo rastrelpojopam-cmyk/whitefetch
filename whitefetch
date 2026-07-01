@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+import os
+import platform
+import subprocess
+import sys
+import psutil
+
+def get_size(bytes_value):
+    gb_value = bytes_value / (1024 ** 3)
+    return f"{gb_value:.2f} GB"
+
+def get_gpu_model():
+    try:
+        output = subprocess.check_output("lspci | grep -Ei 'vga|3d|display'", shell=True).decode('utf-8')
+        lines = output.strip().split('\n')
+        gpus = []
+        for line in lines:
+            if ":" in line:
+                parts = line.split(":")
+                gpu_name = parts[1].strip() if len(parts) > 2 else parts[0].strip()
+                gpu_name = gpu_name.replace("Controller", "").replace("Graphics", "").strip()
+                gpus.append(gpu_name)
+        return ", ".join(gpus) if gpus else "Unknown GPU"
+    except Exception:
+        return "Unknown GPU"
+
+def get_motherboard():
+    try:
+        with open("/sys/class/dmi/id/board_name", "r") as f:
+            board = f.read().strip()
+        with open("/sys/class/dmi/id/board_vendor", "r") as f:
+            vendor = f.read().strip()
+        return f"{vendor} {board}"
+    except Exception:
+        return "Unknown Motherboard"
+
+NEOFETCH_SMALL_TUX = [
+    "    .--.       ",
+    "   |o_o |      ",
+    "   |:_/ |      ",
+    "  //   \\\\      ",
+    " (|     | )    ",
+    "/'\\_   _/`\\    ",
+    "\\___)=(___/    "
+]
+
+def main():
+    username = os.getlogin()
+    hostname = platform.node()
+    
+    cpu_model = "Unknown"
+    try:
+        if os.path.exists("/proc/cpuinfo"):
+            with open("/proc/cpuinfo", "r") as f:
+                for line in f:
+                    if "model name" in line:
+                        cpu_model = line.split(":")[1].strip()
+                        break
+    except Exception:
+        pass
+
+    if not cpu_model or cpu_model == "Unknown":
+        cpu_model = platform.processor()
+
+    try:
+        cpu_freq = f"{psutil.cpu_freq().max:.0f} MHz" if psutil.cpu_freq() else "Unknown"
+    except Exception:
+        cpu_freq = "Unknown"
+
+    memory = psutil.virtual_memory()
+    ram_total = get_size(memory.total)
+    ram_used = get_size(memory.used)
+    ram_free = get_size(memory.available)
+    
+    disk = psutil.disk_usage('/')
+    disk_total = get_size(disk.total)
+    disk_used = get_size(disk.used)
+    disk_free = get_size(disk.free)
+
+    # Структурируем данные в виде пар для автовыравнивания
+    raw_data = [
+        ("OS", f"{platform.system()} {platform.release()} ({platform.machine()})"),
+        ("MOTHERBOARD", get_motherboard()),
+        ("CPU", f"{cpu_model} @ {cpu_freq}"),
+        ("CORES", f"{psutil.cpu_count(logical=False)} physical / {psutil.cpu_count(logical=True)} logical"),
+        ("GPU", get_gpu_model()),
+        ("RAM USED", f"{ram_used} / {ram_total} (Free: {ram_free})"),
+        ("DISK USED", f"{disk_used} / {disk_total} (Free: {disk_free})")
+    ]
+
+    info_lines = [
+        f"{username}@{hostname}",
+        "--------------------------------------------------"
+    ]
+    
+    # Жестко выравниваем все метки до 12 символов
+    for label, value in raw_data:
+        info_lines.append(f"{label:<12}: {value}")
+
+    max_lines = max(len(NEOFETCH_SMALL_TUX), len(info_lines))
+    print()
+    for i in range(max_lines):
+        logo_part = NEOFETCH_SMALL_TUX[i] if i < len(NEOFETCH_SMALL_TUX) else " " * 15
+        info_part = info_lines[i] if i < len(info_lines) else ""
+        print(f"{logo_part}   {info_part}")
+    print()
+
+if __name__ == "__main__":
+    main()
